@@ -107,25 +107,27 @@ elif menu == "Giáo viên chủ nhiệm":
                 st.rerun()
 
 
+
 # 3. GIAO DIỆN QUẢN LÝ
 elif menu == "Quản lý HS/ Ban Giám Hiệu":
     st.header("🛡️ Khu vực Quản lý HS / Ban Giám Hiệu")
-    pw_a = st.text_input("Mật khẩu Quản lý:", type="password")
+    # Sử dụng key duy nhất để tránh xung đột giao diện
+    pw_a = st.text_input("Mật khẩu Quản lý:", type="password", key="admin_pw_input")
+        
     if pw_a == PASS_QUANLY:
+        st.success("Đã xác thực quyền Quản lý!")
         df = st.session_state.db_requests
-        # Lọc đơn: GVCN đã xác nhận và Quản lý chưa duyệt
-        df_loc = df[(df["GVCN Duyệt"] == "Đã xác nhận") & (df["Quản lý Duyệt"] == "Chờ duyệt")]
-        st.dataframe(df_loc)
+        # Hiển thị bảng dữ liệu
+        st.dataframe(df)
             
         id_f = st.number_input("Mã đơn cấp phép:", step=1, min_value=0)
         if st.button("🚀 CẤP PHÉP CHÍNH THỨC"):
             if id_f in df["Mã Đơn"].values:
                 st.session_state.db_requests.loc[st.session_state.db_requests["Mã Đơn"] == id_f, "Quản lý Duyệt"] = "ĐÃ DUYỆT"
                 st.session_state.db_requests.loc[st.session_state.db_requests["Mã Đơn"] == id_f, "Trạng Thái Tổng"] = "Hợp lệ"
-                save_data(st.session_state.db_requests)
-                st.success(f"Đã cấp phép thành công cho mã đơn {id_f}!")
+                # Lưu dữ liệu sau khi duyệt
+                st.session_state.db_requests.to_excel("du_lieu_ra_ngoai.xlsx", index=False)
+                st.success(f"Đã cấp phép thành công cho đơn số {id_f}!")
                 st.rerun()
-            else:
-                st.error("Mã đơn không tồn tại hoặc không nằm trong danh sách chờ!")
-            
-        st.download_button("📩 Tải báo cáo Excel", df.to_csv(index=False).encode('utf-8-sig'), "danh_sach.csv", "text/csv")
+    elif pw_a != "":
+        st.error("Mật khẩu Quản lý không chính xác!")
