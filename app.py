@@ -109,8 +109,9 @@ elif menu == "Giáo viên chủ nhiệm":
 # 3. GIAO DIỆN QUẢN LÝ
     elif menu == "Quản lý HS/ Ban Giám Hiệu":
         st.header("🛡️ Khu vực Quản lý HS / Ban Giám Hiệu")
-        pw_a = st.text_input("Mật khẩu Quản lý:", type="password")
-        if pw_a == PASS_QUANLY:
+        # Tạm thời bỏ qua if mật khẩu để xem nó có hiện bảng không
+        df = st.session_state.db_requests
+        st.dataframe(df)
             df = st.session_state.db_requests
             # Chỉ hiển thị những đơn đã được GVCN xác nhận và đang chờ Quản lý duyệt
             df_hien_thi = df[(df["GVCN Duyệt"] == "Đã xác nhận") & (df["Quản lý Duyệt"] == "Chờ duyệt")]
