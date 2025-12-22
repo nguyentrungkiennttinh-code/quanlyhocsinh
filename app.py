@@ -106,8 +106,6 @@ elif menu == "Giáo viên chủ nhiệm":
                 save_data(st.session_state.db_requests)
                 st.rerun()
 
-
-
 # 3. GIAO DIỆN QUẢN LÝ
 elif menu == "Quản lý HS/ Ban Giám Hiệu":
     st.header("🛡️ Khu vực Quản lý HS / Ban Giám Hiệu")
