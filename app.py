@@ -23,28 +23,30 @@ if menu == "Học sinh đăng ký":
         col1, col2 = st.columns(2)
         with col1:
             ten = st.text_input("Họ và Tên học sinh:")
-            lop = st.selectbox("Chọn Lớp:", ["10A1", "10A2", "10A3","10A4","10A5","10A6","11A1", "11A2", "11A3","11A4","11A5","11A6","12A1", "12A2","12A3","12A4","12A5"])
+            lop = st.selectbox("Chọn Lớp:", ["10A1", "10A2", "11B1", "11B2", "12C1", "12C2"])
         with col2:
             loai_hinh = st.selectbox("Loại hình ra ngoài:", 
                                     ["Ra ngoài trong ngày", "Đi khám / Ốm nằm viện", "Về nhà cuối tuần"])
         
-        # Logic hiển thị thông tin người đón
+        # LOGIC HIỂN THỊ THÔNG TIN NGƯỜI ĐÓN
         chi_tiet = ""
         cccd = ""
+        
         if loai_hinh == "Về nhà cuối tuần":
-            nguoi_don = st.radio("Phương thức về nhà:", 
-                                 ["Bố đón", "Mẹ đón", "Ông đón", "Bà đón", "Người thân khác đón", "Tự đi xe khách về"], 
-                                 horizontal=True)
+            st.markdown("---")
+            st.subheader("🏠 Thông tin về nhà")
+            nguoi_don = st.selectbox("Ai đón bạn?", 
+                                     ["Bố đón", "Mẹ đón", "Ông đón", "Bà đón", "Người thân khác đón", "Tự đi xe khách về"])
             
             if nguoi_don != "Tự đi xe khách về":
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    ten_nguoi_don = st.text_input("Họ tên người đón (Không bắt buộc):")
+                    ten_nguoi_don = st.text_input("Họ tên người đón (Nếu có):")
                 with col_b:
-                    cccd = st.text_input("Số CCCD người đón (Không bắt buộc):")
+                    cccd = st.text_input("Số CCCD người đón (Nếu có):")
                 chi_tiet = f"{nguoi_don}: {ten_nguoi_don}"
             else:
-                chi_tiet = "Tự đi xe khách"
+                chi_tiet = "Tự đi xe khách về"
         else:
             chi_tiet = st.text_area("Lý do cụ thể:")
 
@@ -55,7 +57,7 @@ if menu == "Học sinh đăng ký":
             new_row = pd.DataFrame([[new_id, ten, lop, loai_hinh, chi_tiet, cccd, "Chờ duyệt", "Chờ duyệt", "Đang xử lý"]], 
                                    columns=st.session_state.db_requests.columns)
             st.session_state.db_requests = pd.concat([st.session_state.db_requests, new_row], ignore_index=True)
-            st.success(f"✅ Đã gửi đơn thành công! Mã đơn của bạn là: {new_id}")
+            st.success(f"✅ Gửi đơn thành công! Mã đơn: {new_id}")
 # 2. PHẦN GIÁO VIÊN
 elif menu == "Giáo viên chủ nhiệm":
     st.header("👨‍🏫 Xác nhận của GVCN")
