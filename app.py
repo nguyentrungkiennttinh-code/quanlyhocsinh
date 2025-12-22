@@ -108,18 +108,18 @@ elif menu == "Giáo viên chủ nhiệm":
 
 # 3. GIAO DIỆN QUẢN LÝ
 elif menu == "Quản lý HS/ Ban Giám Hiệu":
-        st.header("🛡️ Khu vực Quản lý HS / Ban Giám Hiệu")
-        pw_a = st.text_input("Mật khẩu Quản lý:", type="password")
-        if pw_a == PASS_QUANLY:
-            df = st.session_state.db_requests
-            st.dataframe(df[(df["GVCN Duyệt"] == "Đã xác nhận") & (df["Quản lý Duyệt"] == "Chờ duyệt")])
-            df = st.session_state.db_requests
-            # Chỉ hiển thị những đơn đã được GVCN xác nhận và đang chờ Quản lý duyệt
-            df_hien_thi = df[(df["GVCN Duyệt"] == "Đã xác nhận") & (df["Quản lý Duyệt"] == "Chờ duyệt")]
-            st.dataframe(df_hien_thi)
+    st.header("🛡️ Khu vực Quản lý HS / Ban Giám Hiệu")
+    pw_a = st.text_input("Mật khẩu Quản lý:", type="password")
+    if pw_a == PASS_QUANLY:
+        df = st.session_state.db_requests
+        st.dataframe(df[(df["GVCN Duyệt"] == "Đã xác nhận") & (df["Quản lý Duyệt"] == "Chờ duyệt")])
+        df = st.session_state.db_requests
+        # Chỉ hiển thị những đơn đã được GVCN xác nhận và đang chờ Quản lý duyệt
+        df_hien_thi = df[(df["GVCN Duyệt"] == "Đã xác nhận") & (df["Quản lý Duyệt"] == "Chờ duyệt")]
+        st.dataframe(df_hien_thi)
             
-            id_f = st.number_input("Mã đơn cấp phép:", step=1, min_value=0)
-            if st.button("🚀 CẤP PHÉP CHÍNH THỨC"):
+         id_f = st.number_input("Mã đơn cấp phép:", step=1, min_value=0)
+         if st.button("🚀 CẤP PHÉP CHÍNH THỨC"):
                 if id_f in df["Mã Đơn"].values:
                     st.session_state.db_requests.loc[st.session_state.db_requests["Mã Đơn"] == id_f, "Quản lý Duyệt"] = "ĐÃ DUYỆT"
                     st.session_state.db_requests.loc[st.session_state.db_requests["Mã Đơn"] == id_f, "Trạng Thái Tổng"] = "Hợp lệ"
