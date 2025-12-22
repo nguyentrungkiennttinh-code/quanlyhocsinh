@@ -16,10 +16,10 @@ st.title("🏫 Quản lý Học sinh Ra ngoài & Về quê")
 st.sidebar.header("DANH MỤC")
 menu = st.sidebar.selectbox("Vai trò:", ["Học sinh đăng ký", "Giáo viên chủ nhiệm", "Quản lý HS/ Ban Giám Hiệu"])
 
-# 1. PHẦN HỌC SINH
+# 1. GIAO DIỆN HỌC SINH
 if menu == "Học sinh đăng ký":
-    st.header("📝 Đăng ký ra ngoài / Về quê")
-    with st.form("form_hs"):
+    st.header("📝 Đăng ký Ra ngoài / Về quê")
+    with st.form("form_dang_ky"):
         col1, col2 = st.columns(2)
         with col1:
             ten = st.text_input("Họ và Tên học sinh:")
@@ -28,29 +28,34 @@ if menu == "Học sinh đăng ký":
             loai_hinh = st.selectbox("Loại hình ra ngoài:", 
                                     ["Ra ngoài trong ngày", "Đi khám / Ốm nằm viện", "Về nhà cuối tuần"])
         
-        # Xử lý thông tin bổ sung cho Về nhà cuối tuần
-        thong_tin_them = ""
-        cccd_them = ""
+        # Logic hiển thị thông tin người đón
+        chi_tiet = ""
+        cccd = ""
         if loai_hinh == "Về nhà cuối tuần":
-            nguoi_don = st.selectbox("Người đón:", ["Bố", "Mẹ", "Ông", "Bà", "Người thân khác", "Đi xe khách (Không người đón)"])
-            if nguoi_don != "Đi xe khách (Không người đón)":
-                thong_tin_them = st.text_input("Tên người đón (Không bắt buộc):")
-                cccd_them = st.text_input("Số CCCD người đón (Không bắt buộc):")
-                lydo_tong_hop = f"Về cuối tuần - {nguoi_don} đón: {thong_tin_them}"
+            nguoi_don = st.radio("Phương thức về nhà:", 
+                                 ["Bố đón", "Mẹ đón", "Ông đón", "Bà đón", "Người thân khác đón", "Tự đi xe khách về"], 
+                                 horizontal=True)
+            
+            if nguoi_don != "Tự đi xe khách về":
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    ten_nguoi_don = st.text_input("Họ tên người đón (Không bắt buộc):")
+                with col_b:
+                    cccd = st.text_input("Số CCCD người đón (Không bắt buộc):")
+                chi_tiet = f"{nguoi_don}: {ten_nguoi_don}"
             else:
-                lydo_tong_hop = "Về cuối tuần - Tự đi xe khách"
+                chi_tiet = "Tự đi xe khách"
         else:
-            lydo_tong_hop = st.text_area("Lý do cụ thể:")
+            chi_tiet = st.text_area("Lý do cụ thể:")
 
         submit = st.form_submit_button("Gửi đơn đăng ký")
         
         if submit and ten:
             new_id = len(st.session_state.db_requests) + 1
-            new_row = pd.DataFrame([[new_id, ten, lop, loai_hinh, lydo_tong_hop, cccd_them, "Chờ duyệt", "Chờ duyệt", "Đang xử lý"]], 
+            new_row = pd.DataFrame([[new_id, ten, lop, loai_hinh, chi_tiet, cccd, "Chờ duyệt", "Chờ duyệt", "Đang xử lý"]], 
                                    columns=st.session_state.db_requests.columns)
             st.session_state.db_requests = pd.concat([st.session_state.db_requests, new_row], ignore_index=True)
-            st.success(f"✅ Đã gửi đơn! Mã đơn: {new_id}")
-
+            st.success(f"✅ Đã gửi đơn thành công! Mã đơn của bạn là: {new_id}")
 # 2. PHẦN GIÁO VIÊN
 elif menu == "Giáo viên chủ nhiệm":
     st.header("👨‍🏫 Xác nhận của GVCN")
