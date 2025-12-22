@@ -108,14 +108,16 @@ elif menu == "Giáo viên chủ nhiệm":
 
 # 3. GIAO DIỆN QUẢN LÝ
 elif menu == "Quản lý HS/ Ban Giám Hiệu":
-        st.header("🛡️ Khu vực Quản lý HS / Ban Giám Hiệu")
-        # Sử dụng mật khẩu đã khai báo là "admin123"
-        pw_a = st.text_input("Nhập mật khẩu để tiếp tục:", type="password")
+    st.header("🛡️ Khu vực Quản lý HS / Ban Giám Hiệu")
+    # Nhập mật khẩu: admin123
+    pw_a = st.text_input("Mật khẩu Quản lý:", type="password", key="admin_key")
         
-        if pw_a == PASS_QUANLY:
-            st.success("Mật khẩu đúng!")
-            st.write("Dữ liệu đang được tải...")
+    if pw_a == PASS_QUANLY:
+        st.success("Xác thực thành công!")
+        if 'db_requests' in st.session_state:
             df = st.session_state.db_requests
             st.dataframe(df)
-        elif pw_a != "":
-            st.error("Mật khẩu 'admin123' không đúng!")
+        else:
+            st.warning("Chưa có dữ liệu đơn đăng ký nào.")
+    elif pw_a != "":
+        st.error("Mật khẩu không chính xác. Vui lòng thử lại!")
