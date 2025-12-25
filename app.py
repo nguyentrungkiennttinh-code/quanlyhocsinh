@@ -2,7 +2,9 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 
-# --- CẤU HÌNH ---
+# --- CẤU HÌNH HỆ THỐNG ---
+PASS_GVCN = "gv123"
+PASS_QUANLY = "admin123"
 SHEET_NAME = "Trangtính1" 
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -12,25 +14,45 @@ def load_data():
         df = conn.read(worksheet=SHEET_NAME, ttl=0)
         return df.dropna(how="all")
     except Exception:
-        return pd.DataFrame(columns=["Mã Đơn", "Họ Tên", "Lớp", "Loại Hình", "GVCN Duyệt", "Quản lý Duyệt", "Trạng Thái"])
+        return pd.DataFrame(columns=[
+            "Mã Đơn", "Họ Tên", "Lớp", "Loại Hình", "Chi Tiết Người Đón", 
+            "CCCD Người Đón", "GVCN Duyệt", "Quản lý Duyệt", "Trạng Thái"
+        ])
 
-st.title("🏫 Quản lý Nội trú")
-menu = st.sidebar.selectbox("Vai trò:", ["Học sinh", "Giáo viên"])
+st.set_page_config(page_title="Quản lý Nội trú", layout="wide")
+st.title("🏫 Quản lý Học sinh")
 
-if menu == "Học sinh":
-    with st.form("form_dk"):
-        ten = st.text_input("Họ và Tên:")
-        lop = st.selectbox("Lớp:", ["10A1", "11A1", "12A1"])
-        submit = st.form_submit_button("Gửi đơn")
+menu = st.sidebar.selectbox("Chọn vai trò:", ["Học sinh đăng ký", "Giáo viên chủ nhiệm"])
+
+if menu == "Học sinh đăng ký":
+    st.header("📝 Đăng ký Ra ngoài / Về quê")
+    with st.form("form_dang_ky", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            ten = st.text_input("Họ và Tên học sinh:")
+            lop = st.selectbox("Chọn Lớp:", ["10A1", "10A2", "11A1", "12A1"])
+        with col2:
+            loai_hinh = st.selectbox("Loại hình:", ["Ra ngoài", "Về quê"])
         
-        if submit:
+        chi_tiet = st.text_area("Lý do:")
+        cccd = st.text_input("CCCD người đón:")
+
+        if st.form_submit_button("Gửi đơn đăng ký"):
             if not ten:
-                st.error("Nhập tên!")
+                st.error("Vui lòng nhập tên!")
             else:
-                df_old = load_data()
-                new_id = len(df_old) + 1
-                new_row = pd.DataFrame([{"Mã Đơn": new_id, "Họ Tên": ten, "Lớp": lop, "GVCN Duyệt": "Chờ", "Quản lý Duyệt": "Chờ", "Trạng Thái": "Đang xử lý"}])
-                updated_df = pd.concat([df_old, new_row], ignore_index=True)
-                conn.update(worksheet=SHEET_NAME, data=updated_df)
-                st.success(f"Gửi thành công! Mã: {new_id}")
-                st.cache_data.clear()
+                try:
+                    df_existing = load_data()
+                    new_id = int(pd.to_numeric(df_existing["Mã Đơn"]).max() + 1) if not df_existing.empty else 1
+                    new_row = pd.DataFrame([{
+                        "Mã Đơn": new_id, "Họ Tên": ten, "Lớp": lop, 
+                        "Loại Hình": loai_hinh, "Chi Tiết Người Đón": chi_tiet, 
+                        "CCCD Người Đón": cccd, "GVCN Duyệt": "Chờ duyệt", 
+                        "Quản lý Duyệt": "Chờ duyệt", "Trạng Thái": "Đang xử lý"
+                    }])
+                    updated_df = pd.concat([df_existing, new_row], ignore_index=True)
+                    conn.update(worksheet=SHEET_NAME, data=updated_df)
+                    st.cache_data.clear() 
+                    st.success(f"✅ Gửi thành công! Mã đơn: {new_id}")
+                except Exception as e:
+                    st.error(f"Lỗi: {e}")
