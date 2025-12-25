@@ -63,7 +63,7 @@ if menu == "Học sinh đăng ký":
             
             # Lưu trực tiếp lên Google Sheets
             updated_df = pd.concat([df_existing, new_row], ignore_index=True)
-            conn.update(worksheet="Trang tính1", data=updated_df)
+            conn.update(worksheet="Trangtính1", data=updated_df)
             st.success(f"✅ Gửi đơn thành công! Mã đơn: {new_id}")
 
 # 2. GIAO DIỆN GIÁO VIÊN
