@@ -81,7 +81,7 @@ elif menu == "Giáo viên chủ nhiệm":
         if st.button("Xác nhận Đơn"):
             if id_gv in df_show["Mã Đơn"].values:
                 df.loc[df["Mã Đơn"] == id_gv, "GVCN Duyệt"] = "Đã xác nhận"
-                conn.update(worksheet="Trang tính1", data=df) # Cập nhật Sheets
+                conn.update(worksheet="Trangtính1", data=df) # Cập nhật Sheets
                 st.success(f"Đã xác nhận thành công đơn số {id_gv}!")
                 st.rerun()
 
