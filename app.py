@@ -5,7 +5,7 @@ from streamlit_gsheets import GSheetsConnection
 # --- CẤU HÌNH HỆ THỐNG ---
 PASS_GVCN = "gv123"
 PASS_QUANLY = "admin123"
-# Tên worksheet phải khớp 100% với tên thẻ dưới chân Google Sheets
+# Đảm bảo tên này khớp chính xác với tab dưới chân file Google Sheets của bạn
 SHEET_NAME = "Trangtính1" 
 
 # Kết nối Google Sheets
@@ -61,47 +61,36 @@ if menu == "Học sinh đăng ký":
             if not ten:
                 st.error("Vui lòng nhập họ tên học sinh!")
             else:
-                df_existing = load_data()
-                # Tạo mã đơn tự động
-                new_id = int(df_existing["Mã Đơn"].max() + 1) if not df_existing.empty else 1
-                
-                new_row = pd.DataFrame([{
-                    "Mã Đơn": new_id, 
-                    "Họ Tên": ten, 
-                    "Lớp": lop, 
-                    "Loại Hình": loai_hinh, 
-                    "Chi Tiết Người Đón": chi_tiet, 
-                    "CCCD Người Đón": cccd, 
-                    "GVCN Duyệt": "Chờ duyệt", 
-                    "Quản lý Duyệt": "Chờ duyệt", 
-                    "Trạng Thái": "Đang xử lý"
-                }])
-                
-                # Cập nhật và xóa cache trước khi ghi
-               # Thay thế đoạn conn.update cũ bằng đoạn này:
-# Thay thế đoạn lưu dữ liệu cũ bằng đoạn này để dứt điểm lỗi:
-try:
-    updated_df = pd.concat([df_existing, new_row], ignore_index=True)
-    # Ép buộc xóa bộ nhớ đệm trước khi cập nhật
-    st.cache_data.clear() 
-    conn.update(worksheet=SHEET_NAME, data=updated_df)
-    st.success(f"✅ Gửi đơn thành công! Mã đơn: {new_id}")
-except Exception as e:
-    # Nếu vẫn lỗi, thử ghi mà không chỉ định tên worksheet để hệ thống tự tìm thẻ đầu tiên
-    conn.update(data=updated_df)
-    st.success(f"✅ Đã gửi đơn thành công (Tự động khớp thẻ)!")
-    # Bước 1: Kết nối và chuẩn bị dữ liệu
-    updated_df = pd.concat([df_existing, new_row], ignore_index=True)
-    
-    # Bước 2: Ép hệ thống ghi đè hoàn toàn (Overwrite)
-    conn.update(worksheet=SHEET_NAME, data=updated_df)
-    
-    st.cache_data.clear() # Xóa bộ nhớ đệm ngay lập tức
-    st.success(f"✅ Gửi đơn thành công! Mã đơn của bạn là: {new_id}")
-except Exception as e:
-    st.error(f"Lỗi ghi dữ liệu: {e}")
-    st.info("Mẹo: Hãy thử nhấn 'Clear cache' ở góc phải màn hình và thử lại.")
-                st.success(f"✅ Gửi đơn thành công! Mã đơn của bạn là: {new_id}")
+                try:
+                    df_existing = load_data()
+                    # Tạo mã đơn tự động dựa trên Mã Đơn lớn nhất
+                    if not df_existing.empty and "Mã Đơn" in df_existing.columns:
+                        new_id = int(pd.to_numeric(df_existing["Mã Đơn"]).max() + 1)
+                    else:
+                        new_id = 1
+                    
+                    new_row = pd.DataFrame([{
+                        "Mã Đơn": new_id, 
+                        "Họ Tên": ten, 
+                        "Lớp": lop, 
+                        "Loại Hình": loai_hinh, 
+                        "Chi Tiết Người Đón": chi_tiet, 
+                        "CCCD Người Đón": cccd, 
+                        "GVCN Duyệt": "Chờ duyệt", 
+                        "Quản lý Duyệt": "Chờ duyệt", 
+                        "Trạng Thái": "Đang xử lý"
+                    }])
+                    
+                    # Cập nhật dữ liệu
+                    updated_df = pd.concat([df_existing, new_row], ignore_index=True)
+                    
+                    # Ép buộc xóa bộ nhớ đệm và cập nhật Sheets
+                    st.cache_data.clear() 
+                    conn.update(worksheet=SHEET_NAME, data=updated_df)
+                    st.success(f"✅ Gửi đơn thành công! Mã đơn của bạn là: {new_id}")
+                except Exception as e:
+                    st.error(f"Lỗi ghi dữ liệu: {e}")
+                    st.info("Mẹo: Hãy kiểm tra tên thẻ Trangtính1 hoặc nhấn 'Clear cache' ở menu bên phải.")
 
 # 2. GIAO DIỆN GIÁO VIÊN
 elif menu == "Giáo viên chủ nhiệm":
@@ -110,18 +99,22 @@ elif menu == "Giáo viên chủ nhiệm":
     if pw == PASS_GVCN:
         lop_ql = st.selectbox("Lớp quản lý:", ["10A1", "10A2", "10A3", "10A4", "10A5", "10A6", "11A1", "11A2", "11A3","11A4","11A5","11A6","12A1", "12A2","12A3","12A4","12A5"])
         df = load_data()
-        df_show = df[(df["Lớp"] == lop_ql) & (df["GVCN Duyệt"] == "Chờ duyệt")]
-        
-        st.dataframe(df_show, use_container_width=True)
-        id_gv = st.number_input("Nhập Mã đơn cần xác nhận:", step=1, min_value=0)
-        
-        if st.button("Xác nhận Đơn"):
-            if id_gv in df["Mã Đơn"].values:
-                df.loc[df["Mã Đơn"] == id_gv, "GVCN Duyệt"] = "Đã xác nhận"
-                conn.update(worksheet=SHEET_NAME, data=df)
-                st.cache_data.clear()
-                st.success(f"Đã xác nhận đơn số {id_gv}!")
-                st.rerun()
+        if not df.empty:
+            df_show = df[(df["Lớp"] == lop_ql) & (df["GVCN Duyệt"] == "Chờ duyệt")]
+            st.dataframe(df_show, use_container_width=True)
+            
+            id_gv = st.number_input("Nhập Mã đơn cần xác nhận:", step=1, min_value=0)
+            if st.button("Xác nhận Đơn"):
+                if id_gv in df["Mã Đơn"].values:
+                    df.loc[df["Mã Đơn"] == id_gv, "GVCN Duyệt"] = "Đã xác nhận"
+                    st.cache_data.clear()
+                    conn.update(worksheet=SHEET_NAME, data=df)
+                    st.success(f"Đã xác nhận đơn số {id_gv}!")
+                    st.rerun()
+                else:
+                    st.warning("Không tìm thấy mã đơn này trong lớp của bạn.")
+        else:
+            st.info("Hiện chưa có dữ liệu đăng ký.")
 
 # 3. GIAO DIỆN QUẢN LÝ / BGH
 elif menu == "Quản lý HS/ Ban Giám Hiệu":
@@ -129,22 +122,22 @@ elif menu == "Quản lý HS/ Ban Giám Hiệu":
     pw_ad = st.text_input("Mật khẩu Quản lý:", type="password")
     if pw_ad == PASS_QUANLY:
         df_all = load_data()
-        st.subheader("📋 Đơn đang chờ phê duyệt")
-        df_admin = df_all[(df_all["GVCN Duyệt"] == "Đã xác nhận") & (df_all["Quản lý Duyệt"] == "Chờ duyệt")]
-        st.dataframe(df_admin, use_container_width=True)
-        
-        id_ql = st.number_input("Nhập Mã đơn phê duyệt:", step=1, min_value=0)
-        if st.button("🚀 CẤP PHÉP CHÍNH THỨC"):
-            if id_ql in df_all["Mã Đơn"].values:
-                df_all.loc[df_all["Mã Đơn"] == id_ql, "Quản lý Duyệt"] = "ĐÃ DUYỆT"
-                df_all.loc[df_all["Mã Đơn"] == id_ql, "Trạng Thái"] = "Hợp lệ"
-                conn.update(worksheet=SHEET_NAME, data=df_all)
-                st.cache_data.clear()
-                st.success(f"Đã duyệt đơn số {id_ql}")
-                st.rerun()
-        
-        st.markdown("---")
-        st.subheader("📥 Xuất dữ liệu")
         if not df_all.empty:
+            st.subheader("📋 Đơn đang chờ phê duyệt")
+            df_admin = df_all[(df_all["GVCN Duyệt"] == "Đã xác nhận") & (df_all["Quản lý Duyệt"] == "Chờ duyệt")]
+            st.dataframe(df_admin, use_container_width=True)
+            
+            id_ql = st.number_input("Nhập Mã đơn phê duyệt:", step=1, min_value=0)
+            if st.button("🚀 CẤP PHÉP CHÍNH THỨC"):
+                if id_ql in df_all["Mã Đơn"].values:
+                    df_all.loc[df_all["Mã Đơn"] == id_ql, "Quản lý Duyệt"] = "ĐÃ DUYỆT"
+                    df_all.loc[df_all["Mã Đơn"] == id_ql, "Trạng Thái"] = "Hợp lệ"
+                    st.cache_data.clear()
+                    conn.update(worksheet=SHEET_NAME, data=df_all)
+                    st.success(f"Đã duyệt đơn số {id_ql}")
+                    st.rerun()
+            
+            st.markdown("---")
+            st.subheader("📥 Xuất dữ liệu")
             csv = df_all.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(label="📩 Tải danh sách báo cáo", data=csv, file_name="bao_cao.csv", mime="text/csv")
+            st
