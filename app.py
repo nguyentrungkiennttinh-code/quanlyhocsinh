@@ -79,7 +79,17 @@ if menu == "Học sinh đăng ký":
                 
                 # Cập nhật và xóa cache trước khi ghi
                # Thay thế đoạn conn.update cũ bằng đoạn này:
+# Thay thế đoạn lưu dữ liệu cũ bằng đoạn này để dứt điểm lỗi:
 try:
+    updated_df = pd.concat([df_existing, new_row], ignore_index=True)
+    # Ép buộc xóa bộ nhớ đệm trước khi cập nhật
+    st.cache_data.clear() 
+    conn.update(worksheet=SHEET_NAME, data=updated_df)
+    st.success(f"✅ Gửi đơn thành công! Mã đơn: {new_id}")
+except Exception as e:
+    # Nếu vẫn lỗi, thử ghi mà không chỉ định tên worksheet để hệ thống tự tìm thẻ đầu tiên
+    conn.update(data=updated_df)
+    st.success(f"✅ Đã gửi đơn thành công (Tự động khớp thẻ)!")
     # Bước 1: Kết nối và chuẩn bị dữ liệu
     updated_df = pd.concat([df_existing, new_row], ignore_index=True)
     
