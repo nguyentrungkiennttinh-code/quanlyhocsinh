@@ -78,9 +78,19 @@ if menu == "Học sinh đăng ký":
                 }])
                 
                 # Cập nhật và xóa cache trước khi ghi
-                updated_df = pd.concat([df_existing, new_row], ignore_index=True)
-                conn.update(worksheet=SHEET_NAME, data=updated_df)
-                st.cache_data.clear() # Xóa bộ nhớ đệm để nhận diện cấu trúc mới
+               # Thay thế đoạn conn.update cũ bằng đoạn này:
+try:
+    # Bước 1: Kết nối và chuẩn bị dữ liệu
+    updated_df = pd.concat([df_existing, new_row], ignore_index=True)
+    
+    # Bước 2: Ép hệ thống ghi đè hoàn toàn (Overwrite)
+    conn.update(worksheet=SHEET_NAME, data=updated_df)
+    
+    st.cache_data.clear() # Xóa bộ nhớ đệm ngay lập tức
+    st.success(f"✅ Gửi đơn thành công! Mã đơn của bạn là: {new_id}")
+except Exception as e:
+    st.error(f"Lỗi ghi dữ liệu: {e}")
+    st.info("Mẹo: Hãy thử nhấn 'Clear cache' ở góc phải màn hình và thử lại.")
                 st.success(f"✅ Gửi đơn thành công! Mã đơn của bạn là: {new_id}")
 
 # 2. GIAO DIỆN GIÁO VIÊN
