@@ -12,7 +12,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # Hàm đọc dữ liệu mới nhất từ Sheets (Không dùng bộ nhớ đệm để đồng bộ tức thì)
 def load_data():
     try:
-        df = conn.read(worksheet="Trang tính1", ttl=0)
+        df = conn.read(worksheet="Trangtinh1", ttl=0)
         return df.dropna(how="all")
     except:
         # Nếu Sheets trống, tạo khung dữ liệu chuẩn
@@ -63,7 +63,7 @@ if menu == "Học sinh đăng ký":
             
             # Lưu trực tiếp lên Google Sheets
             updated_df = pd.concat([df_existing, new_row], ignore_index=True)
-            conn.update(worksheet="Trang tính1", data=updated_df)
+            conn.update(worksheet="Trangtinh1", data=updated_df)
             st.success(f"✅ Gửi đơn thành công! Mã đơn: {new_id}")
 
 # 2. GIAO DIỆN GIÁO VIÊN
@@ -81,7 +81,7 @@ elif menu == "Giáo viên chủ nhiệm":
         if st.button("Xác nhận Đơn"):
             if id_gv in df_show["Mã Đơn"].values:
                 df.loc[df["Mã Đơn"] == id_gv, "GVCN Duyệt"] = "Đã xác nhận"
-                conn.update(worksheet="Trang tính1", data=df) # Cập nhật Sheets
+                conn.update(worksheet="Trangtinh1", data=df) # Cập nhật Sheets
                 st.success(f"Đã xác nhận thành công đơn số {id_gv}!")
                 st.rerun()
 
@@ -100,7 +100,7 @@ elif menu == "Quản lý HS/ Ban Giám Hiệu":
             if id_ql in df_admin["Mã Đơn"].values:
                 df_all.loc[df_all["Mã Đơn"] == id_ql, "Quản lý Duyệt"] = "ĐÃ DUYỆT"
                 df_all.loc[df_all["Mã Đơn"] == id_ql, "Trạng Thái"] = "Hợp lệ"
-                conn.update(worksheet="Trang tính1", data=df_all) # Cập nhật Sheets
+                conn.update(worksheet="Trangtinh1", data=df_all) # Cập nhật Sheets
                 st.success(f"Đã duyệt đơn số {id_ql}")
                 st.rerun()
         
