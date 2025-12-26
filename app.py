@@ -9,13 +9,14 @@ import pytz
 def get_worksheet():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        # Đảm bảo file key.json nằm cùng thư mục với file app.py
+        # Thử kết nối qua file key.json
         creds = ServiceAccountCredentials.from_json_keyfile_name("key.json", scope)
         client = gspread.authorize(creds)
         sh = client.open("Quản lý nội trú") 
         return sh.get_worksheet(0)
     except Exception as e:
         st.error(f"❌ Lỗi kết nối Google Sheets: {e}")
+        st.info("Kiểm tra xem bạn đã upload file key.json lên GitHub chưa.")
         st.stop()
 
 worksheet = get_worksheet()
@@ -111,32 +112,49 @@ elif st.session_state.page == "QLHS":
     if st.text_input("Mật khẩu QLHS:", type="password") == "qlhs123":
         df = load_data()
 
-        # --- PHẦN 1: TẢI BÁO CÁO ---
         with st.expander("📊 Tải dữ liệu tổng hợp báo cáo"):
             col_down1, col_down2 = st.columns(2)
-            
-            # Xuất toàn bộ danh sách (Hỗ trợ tiếng Việt Excel)
             csv_full = df.to_csv(index=False).encode('utf-8-sig')
-            col_down1.download_button(
-                label="📥 Tải toàn bộ danh sách (CSV)",
-                data=csv_full,
-                file_name=f"bao_cao_tong_hop_{datetime.now().strftime('%d_%m_%Y')}.csv",
-                mime="text/csv",
-            )
+            col_down1.download_button(label="📥 Tải toàn bộ danh sách (CSV)", data=csv_full, file_name="bao_cao_full.csv")
             
-            # Xuất danh sách học sinh đang ở ngoài trường
             df_ngoai = df[df['Trạng Thái'] == 'Đang ở ngoài']
             csv_ngoai = df_ngoai.to_csv(index=False).encode('utf-8-sig')
-            col_down2.download_button(
-                label="🏃 Tải DS HS đang ở ngoài (CSV)",
-                data=csv_ngoai,
-                file_name=f"ds_hoc_sinh_dang_ngoai_{datetime.now().strftime('%Hh%M_%d_%m')}.csv",
-                mime="text/csv",
-            )
-            st.caption("💡 Lưu ý: Mở file bằng Excel để xem định dạng tiếng Việt chuẩn nhất.")
+            col_down2.download_button(label="🏃 Tải DS HS đang ở ngoài", data=csv_ngoai, file_name="hs_dang_ngoai.csv")
 
         st.divider()
-
-        # --- PHẦN 2: DUYỆT ĐƠN ---
         st.write("🔍 **Đơn chờ duyệt (Ra ngoài/Khám bệnh):**")
-        df_ql = df[(df['Loại Hình'] != 'Về cuối tuần') & (df['Trạng Thái']
+        # SỬA LỖI CÚ PHÁP TẠI ĐÂY
+        df_ql = df[(df['Loại Hình'] != 'Về cuối tuần') & (df['Trạng Thái'] == 'Chờ QLHS duyệt')]
+        
+        if not df_ql.empty:
+            for i, row in df_ql.iterrows():
+                with st.container(border=True):
+                    st.write(f"🏥 **{row['Họ Tên']}** ({row['Lớp']}) xin {row['Loại Hình']}")
+                    if st.button("BQLHS Phê duyệt", key=f"ql_{i}"):
+                        worksheet.update_cell(i + 2, 8, "Đã cấp phép")
+                        st.rerun()
+        else: st.info("Không có đơn nào chờ duyệt.")
+
+# --- 5. TỰ QUẢN ---
+elif st.session_state.page == "TUQUAN":
+    st.subheader("🛡️ Đội Tự quản trực cổng")
+    if st.text_input("Mật khẩu Tự quản:", type="password") == "tuquan123":
+        tab_ra, tab_vao = st.tabs(["🚪 XÁC NHẬN RA", "🏠 XÁC NHẬN VÀO"])
+        df = load_data()
+        
+        with tab_ra:
+            df_ra = df[df['Trạng Thái'] == 'Đã cấp phép']
+            if not df_ra.empty:
+                for i, row in df_ra.iterrows():
+                    with st.container(border=True):
+                        st.write(f"✅ **{row['Họ Tên']}** ({row['Lớp']})")
+                        if st.button("XÁC NHẬN CHO RA", key=f"out_{i}"):
+                            worksheet.update_cell(i + 2, 8, "Đang ở ngoài")
+                            st.rerun()
+
+        with tab_vao:
+            df_vao = df[(df['Trạng Thái'] == 'Đang ở ngoài') & (df['Thời gian vào'] == 'Chưa vào')]
+            if not df_vao.empty:
+                for i, row in df_vao.iterrows():
+                    with st.container(border=True):
+                        st.write(f"🔔 **{row['Họ T
