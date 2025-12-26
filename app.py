@@ -9,30 +9,24 @@ import pytz
 def get_worksheet():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        
-        # Sửa lỗi: Kiểm tra st.secrets (dành cho Streamlit Cloud) hoặc key.json (local)
+        # Sử dụng Secrets để bảo mật (Khuyên dùng cho Streamlit Cloud)
         if "gcp_service_account" in st.secrets:
-            # Nếu chạy trên Streamlit Cloud, dùng Secrets
-            creds_info = st.secrets["gcp_service_account"]
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_info, scope)
+            info = dict(st.secrets["gcp_service_account"])
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         else:
-            # Nếu chạy máy local, dùng file key.json
+            # Fallback cho chạy local nếu có file key.json
             creds = ServiceAccountCredentials.from_json_keyfile_name("key.json", scope)
-            
-        client = gspread.authorize(creds)
         
-        # ĐẢM BẢO TÊN SHEET CHÍNH XÁC
-        sh = client.open("Quản lý nội trú") 
-        return sh.get_worksheet(0)
+        client = gspread.authorize(creds)
+        # Đảm bảo tên file Google Sheet chính xác 100%
+        return client.open("Quản lý nội trú").get_worksheet(0)
     except Exception as e:
         st.error(f"❌ Lỗi kết nối Google Sheets: {e}")
-        st.info("Mẹo: Hãy đảm bảo bạn đã chia sẻ quyền 'Editor' cho email trong file JSON.")
         st.stop()
 
 worksheet = get_worksheet()
 
 def load_data():
-    # Sử dụng get_all_records() yêu cầu hàng đầu tiên trong Sheet phải là tiêu đề (Header)
     data = worksheet.get_all_records()
     return pd.DataFrame(data)
 
@@ -44,7 +38,7 @@ def get_now_vn():
 st.set_page_config(page_title="Quản lý Nội trú Hà Giang", layout="wide")
 st.markdown("<h2 style='text-align: center; color: #1E3A8A;'>HỆ THỐNG QUẢN LÝ NỘI TRÚ THPT HÀ GIANG</h2>", unsafe_allow_html=True)
 
-if 'page' not in st.session_state: 
+if 'page' not in st.session_state:
     st.session_state.page = "HỌC SINH"
 
 # MENU ĐIỀU HƯỚNG
@@ -52,14 +46,14 @@ cols = st.columns(5)
 btns = ["📝 HỌC SINH", "👨‍🏫 GVCN", "🏛️ BGH", "📋 BQLHS", "🛡️ TỰ QUẢN"]
 pages = ["HỌC SINH", "GVCN", "BGH", "QLHS", "TUQUAN"]
 for col, btn, pg in zip(cols, btns, pages):
-    if col.button(btn, use_container_width=True): 
+    if col.button(btn, use_container_width=True):
         st.session_state.page = pg
 
 st.divider()
 
 LIST_LOP = ["10A1", "10A2", "10A3", "10A4", "10A5", "10A6", "11A1", "11A2", "11A3", "11A4", "11A5", "11A6", "12A1", "12A2", "12A3", "12A4", "12A5", "12A6"]
 
-# --- 1. HỌC SINH ĐĂNG KÝ ---
+# --- XỬ LÝ TRANG HỌC SINH ---
 if st.session_state.page == "HỌC SINH":
     st.subheader("📝 Học sinh đăng ký xin nghỉ")
     with st.form("form_dk", clear_on_submit=True):
@@ -82,29 +76,32 @@ if st.session_state.page == "HỌC SINH":
         
         if st.form_submit_button("GỬI ĐƠN XÁC NHẬN", use_container_width=True):
             if ten and lydo:
-                # Thêm dữ liệu vào Sheet
                 worksheet.append_row([ten, lop, loai, lydo, cach_thuc, nguoi_don, cccd, "Chờ GVCN duyệt", "Chưa vào"])
                 st.success("✅ Gửi thành công! Hãy báo GVCN lớp duyệt đơn.")
 
-# --- 2. GVCN DUYỆT ---
-elif st.session_state.page == "GVCN":
-    st.subheader("👨‍🏫 Giáo viên chủ nhiệm phê duyệt")
-    pwd = st.text_input("Mật khẩu GVCN:", type="password")
-    if pwd == "gv123":
-        chon_lop = st.selectbox("Chọn lớp bạn chủ nhiệm:", LIST_LOP)
+# --- XỬ LÝ TRANG TỰ QUẢN (Sửa lỗi Syntax hình image_95dfb5.png) ---
+elif st.session_state.page == "TUQUAN":
+    st.subheader("🛡️ Đội Tự quản trực cổng")
+    if st.text_input("Mật khẩu Tự quản:", type="password") == "tuquan123":
         df = load_data()
+        tab_ra, tab_vao = st.tabs(["🚪 XÁC NHẬN RA", "🏠 XÁC NHẬN VÀO"])
         
-        # Sửa lỗi: Lọc dữ liệu tránh lỗi index
-        if not df.empty and 'Trạng Thái' in df.columns:
-            df_gv = df[(df['Trạng Thái'] == 'Chờ GVCN duyệt') & (df['Lớp'] == chon_lop)]
-            
-            if not df_gv.empty:
-                for i, row in df_gv.iterrows():
+        with tab_ra:
+            df_ra = df[df['Trạng Thái'] == 'Đã cấp phép']
+            if not df_ra.empty:
+                for i, row in df_ra.iterrows():
                     with st.container(border=True):
-                        st.write(f"👤 **{row['Họ Tên']}** | Đơn: {row['Loại Hình']}")
-                        if st.button(f"Duyệt cho {row['Họ Tên']}", key=f"gv_{i}"):
-                            next_st = "Chờ BGH duyệt" if row['Loại Hình'] == "Về cuối tuần" else "Chờ QLHS duyệt"
-                            # i + 2 vì Pandas bắt đầu từ 0, Sheets bắt đầu từ 1 và hàng 1 là tiêu đề
-                            worksheet.update_cell(i + 2, 8, next_st)
+                        st.write(f"✅ **{row['Họ Tên']}** ({row['Lớp']})")
+                        if st.button("XÁC NHẬN CHO RA", key=f"out_{i}"):
+                            worksheet.update_cell(i + 2, 8, "Đang ở ngoài")
                             st.rerun()
-            else: st.info(f"Lớp {chon_lop} hiện không có đơn chờ duyệt.")
+        with tab_vao:
+            df_vao = df[df['Trạng Thái'] == 'Đang ở ngoài']
+            if not df_vao.empty:
+                for i, row in df_vao.iterrows():
+                    with st.container(border=True):
+                        st.write(f"🔔 **{row['Họ Tên']}** - Lớp {row['Lớp']}")
+                        if st.button("XÁC NHẬN ĐÃ VÀO", key=f"in_{i}"):
+                            worksheet.update_cell(i + 2, 9, get_now_vn())
+                            worksheet.update_cell(i + 2, 8, "Đã vào trường")
+                            st.rerun()
