@@ -11,7 +11,7 @@ def get_worksheet():
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         if "gcp_service_account" in st.secrets:
             info = dict(st.secrets["gcp_service_account"])
-            # Tự động sửa lỗi xuống dòng trong key
+            # Tự động sửa lỗi xuống dòng trong key nếu dán sai
             if "private_key" in info:
                 info["private_key"] = info["private_key"].replace("\\n", "\n")
             creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
@@ -56,6 +56,7 @@ for col, btn, pg in zip(cols, btns, pages):
 
 st.divider()
 
+# Xử lý trang Học sinh
 if st.session_state.page == "HỌC SINH":
     st.subheader("📝 Học sinh đăng ký xin nghỉ")
     with st.form("form_dk", clear_on_submit=True):
@@ -65,8 +66,8 @@ if st.session_state.page == "HỌC SINH":
         lydo = st.text_input("Lý do cụ thể:")
         if st.form_submit_button("GỬI ĐƠN XÁC NHẬN"):
             if ten and lydo:
-                # Ghi vào Sheet: Họ Tên, Lớp, Loại Hình, Lý Do, ..., Trạng Thái, Thời gian vào
-                worksheet.append_row([ten, lop, loai, lydo, "N/A", "N/A", "N/A", "Chờ GVCN duyệt", "Chưa vào"])
+                # Ghi dữ liệu vào sheet (Khớp với các cột trong ảnh image_a147e6.png)
+                worksheet.append_row([ten, lop, loai, lydo, "", "", "", "Chờ GVCN duyệt", "Chưa vào"])
                 st.success("✅ Gửi đơn thành công!")
             else:
-                st.warning("Vui lòng điền đủ thông tin.")
+                st.error("Vui lòng điền đầy đủ thông tin.")
