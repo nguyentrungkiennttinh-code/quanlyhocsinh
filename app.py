@@ -9,14 +9,17 @@ import pytz
 def get_worksheet():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        # Lấy thông tin từ Streamlit Secrets
         if "gcp_service_account" in st.secrets:
             info = dict(st.secrets["gcp_service_account"])
-            # Xử lý lỗi định dạng key thường gặp
+            
+            # TỰ ĐỘNG SỬA LỖI ĐỊNH DẠNG KEY (Khắc phục lỗi Incorrect padding)
             if "private_key" in info:
                 info["private_key"] = info["private_key"].replace("\\n", "\n")
+            
             creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
             client = gspread.authorize(creds)
-            # Tên file phải khớp chính xác với ảnh image_9674eb.png
+            # Tên file Google Sheet phải khớp chính xác tuyệt đối
             sh = client.open("Quản lý nội trú") 
             return sh.get_worksheet(0)
         else:
@@ -26,6 +29,7 @@ def get_worksheet():
         st.error(f"❌ Lỗi kết nối Google Sheets: {e}")
         st.stop()
 
+# Khởi tạo kết nối
 worksheet = get_worksheet()
 
 def load_data():
@@ -41,7 +45,7 @@ def get_now_vn():
 
 # 2. GIAO DIỆN CHÍNH
 st.set_page_config(page_title="Quản lý Nội trú", layout="wide")
-st.markdown("<h2 style='text-align: center; color: #1E3A8A;'>HỆ THỐNG QUẢN LÝ NỘI TRÚ THPT HÀ GIANG</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center;'>HỆ THỐNG QUẢN LÝ NỘI TRÚ THPT HÀ GIANG</h2>", unsafe_allow_html=True)
 
 if 'page' not in st.session_state: 
     st.session_state.page = "HỌC SINH"
@@ -65,30 +69,25 @@ if st.session_state.page == "HỌC SINH":
         lop = st.selectbox("Lớp:", LIST_LOP)
         loai = st.radio("Loại hình:", ["Về cuối tuần", "Ra ngoài trong ngày", "Đi khám bệnh"], horizontal=True)
         lydo = st.text_input("Lý do cụ thể:")
-        if st.form_submit_button("GỬI ĐƠN XÁC NHẬN", use_container_width=True):
+        if st.form_submit_button("GỬI ĐƠN XÁC NHẬN"):
             if ten and lydo:
-                # Ghi dữ liệu vào Google Sheet
+                # Ghi dữ liệu: Cột H=Chờ GVCN duyệt, Cột I=Chưa vào
                 worksheet.append_row([ten, lop, loai, lydo, "N/A", "N/A", "N/A", "Chờ GVCN duyệt", "Chưa vào"])
-                st.success("✅ Gửi đơn thành công! Hãy báo GVCN duyệt đơn.")
-            else:
-                st.error("Vui lòng điền đầy đủ Họ tên và Lý do!")
+                st.success("✅ Gửi đơn thành công!")
 
 elif st.session_state.page == "GVCN":
     st.subheader("👨‍🏫 GVCN phê duyệt")
     if st.text_input("Mật khẩu GVCN:", type="password") == "gv123":
         df = load_data()
-        if not df.empty and 'Trạng Thái' in df.columns:
+        if not df.empty:
             df_gv = df[df['Trạng Thái'] == 'Chờ GVCN duyệt']
-            if not df_gv.empty:
-                for i, row in df_gv.iterrows():
-                    with st.container(border=True):
-                        st.write(f"👤 **{row['Họ Tên']}** - Lớp: {row['Lớp']}")
-                        if st.button(f"Duyệt đơn cho {row['Họ Tên']}", key=f"gv_{i}"):
-                            next_st = "Chờ BGH duyệt" if row['Loại Hình'] == "Về cuối tuần" else "Chờ QLHS duyệt"
-                            worksheet.update_cell(i + 2, 8, next_st)
-                            st.rerun()
-            else:
-                st.info("Hiện không có đơn nào đang chờ duyệt.")
+            for i, row in df_gv.iterrows():
+                with st.container(border=True):
+                    st.write(f"👤 **{row['Họ Tên']}** - Lớp: {row['Lớp']}")
+                    if st.button(f"Duyệt đơn cho {row['Họ Tên']}", key=f"gv_{i}"):
+                        next_st = "Chờ BGH duyệt" if row['Loại Hình'] == "Về cuối tuần" else "Chờ QLHS duyệt"
+                        worksheet.update_cell(i + 2, 8, next_st)
+                        st.rerun()
 
 elif st.session_state.page == "TUQUAN":
     st.subheader("🛡️ Đội Tự quản trực cổng")
