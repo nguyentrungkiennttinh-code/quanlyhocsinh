@@ -15,7 +15,7 @@ def get_worksheet():
         else:
             creds = ServiceAccountCredentials.from_json_keyfile_name("key.json", scope)
         client = gspread.authorize(creds)
-        # Tên file Google Sheet phải chính xác 100%
+        # Đảm bảo tên file Google Sheet này đã được chia sẻ quyền chỉnh sửa cho email của bot
         return client.open("Quản lý nội trú").get_worksheet(0)
     except Exception as e:
         st.error(f"❌ Lỗi kết nối Google Sheets: {e}")
@@ -33,46 +33,47 @@ def get_now_vn():
 
 # 2. GIAO DIỆN
 st.set_page_config(page_title="Quản lý Nội trú Hà Giang", layout="wide")
-st.markdown("<h2 style='text-align: center;'>HỆ THỐNG QUẢN LÝ NỘI TRÚ</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #1E3A8A;'>HỆ THỐNG QUẢN LÝ NỘI TRÚ</h2>", unsafe_allow_html=True)
 
-if 'page' not in st.session_state: st.session_state.page = "HỌC SINH"
+if 'page' not in st.session_state:
+    st.session_state.page = "HỌC SINH"
 
 # MENU ĐIỀU HƯỚNG
 cols = st.columns(5)
 btns = ["📝 HỌC SINH", "👨‍🏫 GVCN", "🏛️ BGH", "📋 BQLHS", "🛡️ TỰ QUẢN"]
 pages = ["HỌC SINH", "GVCN", "BGH", "QLHS", "TUQUAN"]
 for col, btn, pg in zip(cols, btns, pages):
-    if col.button(btn, use_container_width=True): st.session_state.page = pg
+    if col.button(btn, use_container_width=True):
+        st.session_state.page = pg
 
 st.divider()
-LIST_LOP = ["10A1", "10A2", "10A3", "10A4", "10A5", "10A6","11A1", "11A2", "11A3", "11A4", "11A5", "11A6", "12A1", "12A2", "12A3", "12A4", "12A5"] # Rút gọn ví dụ
+LIST_LOP = [f"{k}A{i}" for k in [10, 11, 12] for i in range(1, 7)]
 
-# --- 1. HỌC SINH ĐĂNG KÝ ---
+# --- LOGIC XỬ LÝ TỪNG TRANG ---
 if st.session_state.page == "HỌC SINH":
-    st.subheader("📝 Học sinh đăng ký xin nghỉ")
+    st.subheader("📝 Đăng ký xin nghỉ")
     with st.form("form_dk", clear_on_submit=True):
-        ten = st.text_input("Họ và tên học sinh:")
+        ten = st.text_input("Họ và tên:")
         lop = st.selectbox("Lớp:", LIST_LOP)
         loai = st.radio("Loại hình:", ["Về cuối tuần", "Ra ngoài", "Khám bệnh"], horizontal=True)
-        lydo = st.text_input("Lý do cụ thể:")
+        lydo = st.text_input("Lý do:")
         if st.form_submit_button("GỬI ĐƠN"):
             if ten and lydo:
                 worksheet.append_row([ten, lop, loai, lydo, "N/A", "N/A", "N/A", "Chờ GVCN duyệt", "Chưa vào"])
                 st.success("✅ Gửi thành công!")
 
-# --- 2. TỰ QUẢN (XỬ LÝ LỖI HÌNH image_95dfb5.png) ---
 elif st.session_state.page == "TUQUAN":
     st.subheader("🛡️ Đội Tự quản trực cổng")
-    if st.text_input("Mật khẩu:", type="password") == "tuquan123":
+    if st.text_input("Mật khẩu Tự quản:", type="password") == "tuquan123":
         df = load_data()
-        tab_ra, tab_vao = st.tabs(["🚪 XÁC NHẬN RA", "🏠 XÁC NHẬN VÀO"])
-        with tab_ra:
+        t1, t2 = st.tabs(["🚪 RA", "🏠 VÀO"])
+        with t1:
             df_ra = df[df['Trạng Thái'] == 'Đã cấp phép']
             for i, row in df_ra.iterrows():
                 if st.button(f"Xác nhận RA: {row['Họ Tên']}", key=f"ra_{i}"):
                     worksheet.update_cell(i + 2, 8, "Đang ở ngoài")
                     st.rerun()
-        with tab_vao:
+        with t2:
             df_vao = df[df['Trạng Thái'] == 'Đang ở ngoài']
             for i, row in df_vao.iterrows():
                 if st.button(f"Xác nhận VÀO: {row['Họ Tên']}", key=f"in_{i}"):
