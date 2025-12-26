@@ -9,7 +9,7 @@ import pytz
 def get_worksheet():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        # Ưu tiên lấy từ Streamlit Secrets
+        # Ưu tiên sử dụng Secrets để bảo mật
         if "gcp_service_account" in st.secrets:
             info = dict(st.secrets["gcp_service_account"])
             creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
@@ -54,7 +54,6 @@ for col, btn, pg in zip(cols, btns, pages):
 st.divider()
 LIST_LOP = ["10A1", "10A2", "10A3", "10A4", "10A5", "10A6", "11A1", "11A2", "11A3", "11A4", "11A5", "11A6", "12A1", "12A2", "12A3", "12A4", "12A5", "12A6"]
 
-# --- XỬ LÝ TRANG ---
 if st.session_state.page == "HỌC SINH":
     st.subheader("📝 Học sinh đăng ký xin nghỉ")
     with st.form("form_dk", clear_on_submit=True):
@@ -71,12 +70,12 @@ elif st.session_state.page == "GVCN":
     st.subheader("👨‍🏫 Giáo viên chủ nhiệm phê duyệt")
     if st.text_input("Mật khẩu GVCN:", type="password") == "gv123":
         df = load_data()
-        if not df.empty and 'Trạng Thái' in df.columns:
+        if not df.empty:
             df_gv = df[df['Trạng Thái'] == 'Chờ GVCN duyệt']
             for i, row in df_gv.iterrows():
                 with st.container(border=True):
                     st.write(f"👤 **{row['Họ Tên']}** | Lớp: {row['Lớp']}")
-                    if st.button(f"Duyệt cho {row['Họ Tên']}", key=f"gv_{i}"):
+                    if st.button(f"Duyệt đơn {row['Họ Tên']}", key=f"gv_{i}"):
                         next_st = "Chờ BGH duyệt" if row['Loại Hình'] == "Về cuối tuần" else "Chờ QLHS duyệt"
                         worksheet.update_cell(i + 2, 8, next_st)
                         st.rerun()
@@ -87,15 +86,17 @@ elif st.session_state.page == "TUQUAN":
         df = load_data()
         tab_ra, tab_vao = st.tabs(["🚪 RA CỔNG", "🏠 VÀO TRƯỜNG"])
         with tab_ra:
-            df_ra = df[df['Trạng Thái'] == 'Đã cấp phép']
-            for i, row in df_ra.iterrows():
-                if st.button(f"Xác nhận RA: {row['Họ Tên']}", key=f"out_{i}"):
-                    worksheet.update_cell(i + 2, 8, "Đang ở ngoài")
-                    st.rerun()
+            if not df.empty:
+                df_ra = df[df['Trạng Thái'] == 'Đã cấp phép']
+                for i, row in df_ra.iterrows():
+                    if st.button(f"Xác nhận RA: {row['Họ Tên']}", key=f"out_{i}"):
+                        worksheet.update_cell(i + 2, 8, "Đang ở ngoài")
+                        st.rerun()
         with tab_vao:
-            df_vao = df[df['Trạng Thái'] == 'Đang ở ngoài']
-            for i, row in df_vao.iterrows():
-                if st.button(f"Xác nhận VÀO: {row['Họ Tên']}", key=f"in_{i}"):
-                    worksheet.update_cell(i + 2, 8, "Đã vào trường")
-                    worksheet.update_cell(i + 2, 9, get_now_vn())
-                    st.rerun()
+            if not df.empty:
+                df_vao = df[df['Trạng Thái'] == 'Đang ở ngoài']
+                for i, row in df_vao.iterrows():
+                    if st.button(f"Xác nhận VÀO: {row['Họ Tên']}", key=f"in_{i}"):
+                        worksheet.update_cell(i + 2, 8, "Đã vào trường")
+                        worksheet.update_cell(i + 2, 9, get_now_vn())
+                        st.rerun()
