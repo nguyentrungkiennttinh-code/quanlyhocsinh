@@ -10,15 +10,16 @@ def get_worksheet():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         
-        # Cập nhật: Ưu tiên dùng st.secrets để bảo mật và tránh lỗi định dạng file
+        # Kiểm tra cấu hình Secrets từ Streamlit Cloud
         if "gcp_service_account" in st.secrets:
             info = dict(st.secrets["gcp_service_account"])
             creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         else:
-            # Dành cho chạy ở máy cá nhân (Local)
+            # Dành cho chạy ở máy cá nhân (Local) nếu có file key.json
             creds = ServiceAccountCredentials.from_json_keyfile_name("key.json", scope)
             
         client = gspread.authorize(creds)
+        # Tên Google Sheet phải chính xác 100%
         sh = client.open("Quản lý nội trú") 
         return sh.get_worksheet(0)
     except Exception as e:
@@ -77,6 +78,7 @@ if st.session_state.page == "HỌC SINH":
         
         if st.form_submit_button("GỬI ĐƠN XÁC NHẬN", use_container_width=True):
             if ten and lydo:
+                # Cấu trúc: Họ Tên, Lớp, Loại Hình, Lý Do, Cách Thức, Người Đón, CCCD, Trạng Thái, Thời gian vào
                 worksheet.append_row([ten, lop, loai, lydo, cach_thuc, nguoi_don, cccd, "Chờ GVCN duyệt", "Chưa vào"])
                 st.success("✅ Gửi thành công! Hãy báo GVCN lớp duyệt đơn.")
 
@@ -86,91 +88,58 @@ elif st.session_state.page == "GVCN":
     if st.text_input("Mật khẩu GVCN:", type="password") == "gv123":
         chon_lop = st.selectbox("Chọn lớp bạn chủ nhiệm:", LIST_LOP)
         df = load_data()
-        df_gv = df[(df['Trạng Thái'] == 'Chờ GVCN duyệt') & (df['Lớp'] == chon_lop)]
         
-        if not df_gv.empty:
-            for i, row in df_gv.iterrows():
-                with st.container(border=True):
-                    st.write(f"👤 **{row['Họ Tên']}** | Đơn: {row['Loại Hình']}")
-                    if st.button(f"Duyệt cho {row['Họ Tên']}", key=f"gv_{i}"):
-                        next_st = "Chờ BGH duyệt" if row['Loại Hình'] == "Về cuối tuần" else "Chờ QLHS duyệt"
-                        worksheet.update_cell(i + 2, 8, next_st)
-                        st.rerun()
-        else: st.info(f"Lớp {chon_lop} hiện không có đơn chờ duyệt.")
+        if not df.empty and 'Trạng Thái' in df.columns:
+            df_gv = df[(df['Trạng Thái'] == 'Chờ GVCN duyệt') & (df['Lớp'] == chon_lop)]
+            if not df_gv.empty:
+                for i, row in df_gv.iterrows():
+                    with st.container(border=True):
+                        st.write(f"👤 **{row['Họ Tên']}** | Đơn: {row['Loại Hình']}")
+                        if st.button(f"Duyệt cho {row['Họ Tên']}", key=f"gv_{i}"):
+                            next_st = "Chờ BGH duyệt" if row['Loại Hình'] == "Về cuối tuần" else "Chờ QLHS duyệt"
+                            worksheet.update_cell(i + 2, 8, next_st)
+                            st.rerun()
+            else: st.info(f"Lớp {chon_lop} hiện không có đơn chờ duyệt.")
 
 # --- 3. BGH DUYỆT ---
 elif st.session_state.page == "BGH":
     st.subheader("🏛️ Ban Giám Hiệu phê duyệt (Về cuối tuần)")
     if st.text_input("Mật khẩu BGH:", type="password") == "bgh123":
         df = load_data()
-        df_bgh = df[(df['Loại Hình'] == 'Về cuối tuần') & (df['Trạng Thái'] == 'Chờ BGH duyệt')]
-        if not df_bgh.empty:
-            for i, row in df_bgh.iterrows():
-                with st.container(border=True):
-                    st.write(f"✅ **{row['Họ Tên']}** - Lớp {row['Lớp']}")
-                    st.write(f"🚗 {row['Cách Thức']} | Người đón: {row['Người Đón']} | CCCD: {row['CCCD']}")
-                    if st.button("BGH Phê duyệt", key=f"bgh_{i}"):
-                        worksheet.update_cell(i + 2, 8, "Đã cấp phép")
-                        st.rerun()
-        else: st.info("Không có đơn về cuối tuần nào chờ duyệt.")
+        if not df.empty:
+            df_bgh = df[(df['Loại Hình'] == 'Về cuối tuần') & (df['Trạng Thái'] == 'Chờ BGH duyệt')]
+            if not df_bgh.empty:
+                for i, row in df_bgh.iterrows():
+                    with st.container(border=True):
+                        st.write(f"✅ **{row['Họ Tên']}** - Lớp {row['Lớp']}")
+                        st.write(f"🚗 {row['Cách Thức']} | Người đón: {row['Người Đón']} | CCCD: {row['CCCD']}")
+                        if st.button("BGH Phê duyệt", key=f"bgh_{i}"):
+                            worksheet.update_cell(i + 2, 8, "Đã cấp phép")
+                            st.rerun()
+            else: st.info("Không có đơn về cuối tuần nào chờ duyệt.")
 
 # --- 4. BQLHS DUYỆT ---
 elif st.session_state.page == "QLHS":
     st.subheader("📋 Ban Quản lý học sinh (Duyệt & Báo cáo)")
     if st.text_input("Mật khẩu QLHS:", type="password") == "qlhs123":
         df = load_data()
-        with st.expander("📊 Tải dữ liệu tổng hợp báo cáo"):
-            col_down1, col_down2 = st.columns(2)
-            csv = df.to_csv(index=False).encode('utf-8-sig')
-            col_down1.download_button(
-                label="📥 Tải toàn bộ danh sách (CSV)",
-                data=csv,
-                file_name=f"bao_cao_noi_tru_{datetime.now().strftime('%d_%m_%Y')}.csv",
-                mime="text/csv",
-            )
-            df_dang_ngoai = df[df['Trạng Thái'] == 'Đang ở ngoài']
-            csv_ngoai = df_dang_ngoai.to_csv(index=False).encode('utf-8-sig')
-            col_down2.download_button(
-                label="🏃 Tải DS HS đang ở ngoài (CSV)",
-                data=csv_ngoai,
-                file_name=f"hs_dang_o_ngoai_{datetime.now().strftime('%Hh%M_%d_%m')}.csv",
-                mime="text/csv",
-            )
-        st.divider()
-        df_ql = df[(df['Loại Hình'] != 'Về cuối tuần') & (df['Trạng Thái'] == 'Chờ QLHS duyệt')]
-        if not df_ql.empty:
-            for i, row in df_ql.iterrows():
-                with st.container(border=True):
-                    st.write(f"🏥 **{row['Họ Tên']}** ({row['Lớp']}) xin {row['Loại Hình']}")
-                    if st.button("BQLHS Phê duyệt", key=f"ql_{i}"):
-                        worksheet.update_cell(i + 2, 8, "Đã cấp phép")
-                        st.rerun()
-        else: st.info("Không có đơn ra ngoài nào chờ duyệt.")
-
-# --- 5. TỰ QUẢN ---
-elif st.session_state.page == "TUQUAN":
-    st.subheader("🛡️ Đội Tự quản trực cổng")
-    if st.text_input("Mật khẩu Tự quản:", type="password") == "tuquan123":
-        tab_ra, tab_vao = st.tabs(["🚪 XÁC NHẬN RA", "🏠 XÁC NHẬN VÀO"])
-        df = load_data()
-        with tab_ra:
-            df_ra = df[df['Trạng Thái'] == 'Đã cấp phép']
-            if not df_ra.empty:
-                for i, row in df_ra.iterrows():
-                    with st.container(border=True):
-                        st.write(f"✅ **{row['Họ Tên']}** ({row['Lớp']})")
-                        if row['Loại Hình'] == "Về cuối tuần":
-                            st.write(f"📢 Đón bởi: {row['Người Đón']} | CCCD: {row['CCCD']}")
-                        if st.button("XÁC NHẬN CHO RA", key=f"out_{i}"):
-                            worksheet.update_cell(i + 2, 8, "Đang ở ngoài")
-                            st.rerun()
-        with tab_vao:
-            df_vao = df[(df['Trạng Thái'] == 'Đang ở ngoài') & (df['Thời gian vào'] == 'Chưa vào')]
-            if not df_vao.empty:
-                for i, row in df_vao.iterrows():
-                    with st.container(border=True):
-                        st.write(f"🔔 **{row['Họ Tên']}** - Lớp {row['Lớp']}")
-                        if st.button("XÁC NHẬN ĐÃ VÀO TRƯỜNG", key=f"in_{i}"):
-                            worksheet.update_cell(i + 2, 9, get_now_vn())
-                            worksheet.update_cell(i + 2, 8, "Đã vào trường")
-                            st.rerun()
+        if not df.empty:
+            with st.expander("📊 Tải dữ liệu tổng hợp báo cáo"):
+                col_down1, col_down2 = st.columns(2)
+                csv = df.to_csv(index=False).encode('utf-8-sig')
+                col_down1.download_button(
+                    label="📥 Tải toàn bộ danh sách (CSV)",
+                    data=csv,
+                    file_name=f"bao_cao_noi_tru_{datetime.now().strftime('%d_%m_%Y')}.csv",
+                    mime="text/csv",
+                )
+                df_dang_ngoai = df[df['Trạng Thái'] == 'Đang ở ngoài']
+                csv_ngoai = df_dang_ngoai.to_csv(index=False).encode('utf-8-sig')
+                col_down2.download_button(
+                    label="🏃 Tải DS HS đang ở ngoài (CSV)",
+                    data=csv_ngoai,
+                    file_name=f"hs_dang_o_ngoai_{datetime.now().strftime('%Hh%M_%d_%m')}.csv",
+                    mime="text/csv",
+                )
+            st.divider()
+            df_ql = df[(df['Loại Hình
