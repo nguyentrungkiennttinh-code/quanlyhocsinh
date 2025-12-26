@@ -16,7 +16,6 @@ def get_worksheet():
         return sh.get_worksheet(0)
     except Exception as e:
         st.error(f"❌ Lỗi kết nối Google Sheets: {e}")
-        st.info("Kiểm tra xem bạn đã upload file key.json lên GitHub chưa.")
         st.stop()
 
 worksheet = get_worksheet()
@@ -82,79 +81,4 @@ elif st.session_state.page == "GVCN":
         
         if not df_gv.empty:
             for i, row in df_gv.iterrows():
-                with st.container(border=True):
-                    st.write(f"👤 **{row['Họ Tên']}** | Đơn: {row['Loại Hình']}")
-                    if st.button(f"Duyệt cho {row['Họ Tên']}", key=f"gv_{i}"):
-                        next_st = "Chờ BGH duyệt" if row['Loại Hình'] == "Về cuối tuần" else "Chờ QLHS duyệt"
-                        worksheet.update_cell(i + 2, 8, next_st)
-                        st.rerun()
-        else: st.info(f"Lớp {chon_lop} hiện không có đơn chờ duyệt.")
-
-# --- 3. BGH DUYỆT ---
-elif st.session_state.page == "BGH":
-    st.subheader("🏛️ Ban Giám Hiệu phê duyệt (Về cuối tuần)")
-    if st.text_input("Mật khẩu BGH:", type="password") == "bgh123":
-        df = load_data()
-        df_bgh = df[(df['Loại Hình'] == 'Về cuối tuần') & (df['Trạng Thái'] == 'Chờ BGH duyệt')]
-        if not df_bgh.empty:
-            for i, row in df_bgh.iterrows():
-                with st.container(border=True):
-                    st.write(f"✅ **{row['Họ Tên']}** - Lớp {row['Lớp']}")
-                    st.write(f"🚗 {row['Cách Thức']} | Người đón: {row['Người Đón']} | CCCD: {row['CCCD']}")
-                    if st.button("BGH Phê duyệt", key=f"bgh_{i}"):
-                        worksheet.update_cell(i + 2, 8, "Đã cấp phép")
-                        st.rerun()
-        else: st.info("Không có đơn về cuối tuần nào chờ duyệt.")
-
-# --- 4. BQLHS DUYỆT & XUẤT BÁO CÁO ---
-elif st.session_state.page == "QLHS":
-    st.subheader("📋 Ban Quản lý học sinh (Duyệt & Báo cáo)")
-    if st.text_input("Mật khẩu QLHS:", type="password") == "qlhs123":
-        df = load_data()
-
-        with st.expander("📊 Tải dữ liệu tổng hợp báo cáo"):
-            col_down1, col_down2 = st.columns(2)
-            csv_full = df.to_csv(index=False).encode('utf-8-sig')
-            col_down1.download_button(label="📥 Tải toàn bộ danh sách (CSV)", data=csv_full, file_name="bao_cao_full.csv")
-            
-            df_ngoai = df[df['Trạng Thái'] == 'Đang ở ngoài']
-            csv_ngoai = df_ngoai.to_csv(index=False).encode('utf-8-sig')
-            col_down2.download_button(label="🏃 Tải DS HS đang ở ngoài", data=csv_ngoai, file_name="hs_dang_ngoai.csv")
-
-        st.divider()
-        st.write("🔍 **Đơn chờ duyệt (Ra ngoài/Khám bệnh):**")
-        # SỬA LỖI CÚ PHÁP TẠI ĐÂY
-        df_ql = df[(df['Loại Hình'] != 'Về cuối tuần') & (df['Trạng Thái'] == 'Chờ QLHS duyệt')]
-        
-        if not df_ql.empty:
-            for i, row in df_ql.iterrows():
-                with st.container(border=True):
-                    st.write(f"🏥 **{row['Họ Tên']}** ({row['Lớp']}) xin {row['Loại Hình']}")
-                    if st.button("BQLHS Phê duyệt", key=f"ql_{i}"):
-                        worksheet.update_cell(i + 2, 8, "Đã cấp phép")
-                        st.rerun()
-        else: st.info("Không có đơn nào chờ duyệt.")
-
-# --- 5. TỰ QUẢN ---
-elif st.session_state.page == "TUQUAN":
-    st.subheader("🛡️ Đội Tự quản trực cổng")
-    if st.text_input("Mật khẩu Tự quản:", type="password") == "tuquan123":
-        tab_ra, tab_vao = st.tabs(["🚪 XÁC NHẬN RA", "🏠 XÁC NHẬN VÀO"])
-        df = load_data()
-        
-        with tab_ra:
-            df_ra = df[df['Trạng Thái'] == 'Đã cấp phép']
-            if not df_ra.empty:
-                for i, row in df_ra.iterrows():
-                    with st.container(border=True):
-                        st.write(f"✅ **{row['Họ Tên']}** ({row['Lớp']})")
-                        if st.button("XÁC NHẬN CHO RA", key=f"out_{i}"):
-                            worksheet.update_cell(i + 2, 8, "Đang ở ngoài")
-                            st.rerun()
-
-        with tab_vao:
-            df_vao = df[(df['Trạng Thái'] == 'Đang ở ngoài') & (df['Thời gian vào'] == 'Chưa vào')]
-            if not df_vao.empty:
-                for i, row in df_vao.iterrows():
-                    with st.container(border=True):
-                        st.write(f"🔔 **{row['Họ T
+                with st.container(border=
