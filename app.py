@@ -9,10 +9,19 @@ import pytz
 def get_worksheet():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name("key.json", scope)
-        client = gspread.authorize(creds)
-        sh = client.open("Quản lý nội trú") 
-        return sh.get_worksheet(0)
+        if "gcp_service_account" in st.secrets:
+            info = dict(st.secrets["gcp_service_account"])
+            # Tự động sửa lỗi xuống dòng trong key nếu dán sai
+            if "private_key" in info:
+                info["private_key"] = info["private_key"].replace("\\n", "\n")
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
+            client = gspread.authorize(creds)
+            # Tên file phải khớp chính xác với ảnh image_a147e6.png
+            sh = client.open("Quản lý nội trú") 
+            return sh.get_worksheet(0)
+        else:
+            st.error("Chưa cấu hình Secrets trên Streamlit Cloud!")
+            st.stop()
     except Exception as e:
         st.error(f"❌ Lỗi kết nối Google Sheets: {e}")
         st.stop()
